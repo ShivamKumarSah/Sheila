@@ -1,18 +1,27 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Chrome as Home, ChartBar as BarChart3, Mic, Settings, Bluetooth } from 'lucide-react-native';
+import { Home, ChartBar as BarChart3, Wifi, Settings } from 'lucide-react-native';
 import { Platform, StyleSheet } from 'react-native';
 import { BluetoothProvider } from '@/context/BluetoothContext';
 import { VoiceProvider } from '@/context/VoiceContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function AppLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <BluetoothProvider>
       <VoiceProvider>
         <Tabs
           screenOptions={{
             headerShown: false,
-            tabBarStyle: styles.tabBar,
+            tabBarStyle: [
+              styles.tabBar,
+              {
+                paddingBottom: insets.bottom,
+                height: 60 + insets.bottom,
+              }
+            ],
             tabBarActiveTintColor: '#2563EB',
             tabBarInactiveTintColor: '#64748B',
             tabBarLabelStyle: styles.tabBarLabel,
@@ -33,17 +42,10 @@ export default function AppLayout() {
             }}
           />
           <Tabs.Screen
-            name="voice"
-            options={{
-              title: 'Voice',
-              tabBarIcon: ({ color, size }) => <Mic size={size} color={color} />,
-            }}
-          />
-          <Tabs.Screen
             name="connect"
             options={{
               title: 'Connect',
-              tabBarIcon: ({ color, size }) => <Bluetooth size={size} color={color} />,
+              tabBarIcon: ({ color, size }) => <Wifi size={size} color={color} />,
             }}
           />
           <Tabs.Screen
@@ -64,8 +66,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    height: Platform.OS === 'ios' ? 90 : 70,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 10,
     paddingTop: 10,
     elevation: 8,
     shadowColor: '#000',

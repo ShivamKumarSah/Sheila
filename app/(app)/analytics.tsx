@@ -53,7 +53,7 @@ export default function AnalyticsScreen() {
     try {
       setIsLoading(true);
       const data = await fetchAnalytics();
-      
+
       // Transform the data for our visualizations
       const mockData: AnalyticsData = {
         dailyStats: Array.from({ length: 30 }, (_, i) => ({
@@ -99,11 +99,11 @@ export default function AnalyticsScreen() {
   useEffect(() => {
     if (isConnected) {
       loadAnalytics();
-      
+
       // Set up auto-refresh every 5 seconds
       const interval = setInterval(loadAnalytics, 5000);
-      setRefreshInterval(interval);
-      
+      setRefreshInterval(interval as unknown as NodeJS.Timeout);
+
       return () => {
         if (interval) clearInterval(interval);
       };
@@ -112,7 +112,7 @@ export default function AnalyticsScreen() {
 
   if (!isConnected) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.header}>
           <Text style={styles.title}>Analytics</Text>
         </View>
@@ -128,11 +128,11 @@ export default function AnalyticsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.title}>Analytics</Text>
-        <TouchableOpacity 
-          style={styles.refreshButton} 
+        <TouchableOpacity
+          style={styles.refreshButton}
           onPress={loadAnalytics}
           disabled={isLoading}
         >
@@ -140,7 +140,7 @@ export default function AnalyticsScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -220,7 +220,7 @@ export default function AnalyticsScreen() {
                 padding={{ top: 10, bottom: 40, left: 50, right: 20 }}
                 containerComponent={
                   <VictoryVoronoiContainer
-                    labels={({ datum }) => 
+                    labels={({ datum }) =>
                       `${datum.commands} commands\n${format(parseISO(datum.date), 'MMM d')}`
                     }
                     labelComponent={<VictoryTooltip />}
@@ -360,6 +360,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+    paddingBottom: 100,
   },
   timeRangeContainer: {
     flexDirection: 'row',

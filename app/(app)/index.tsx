@@ -1,37 +1,49 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useBluetooth } from '@/context/BluetoothContext';
+import { useConnection } from '@/context/ConnectionContext';
 import { useVoice } from '@/context/VoiceContext';
 import { useAuth } from '@/context/AuthContext';
-import { Mic, ChevronRight, Activity, Thermometer, Droplets, Bluetooth } from 'lucide-react-native';
+import { Mic, ChevronRight, Activity, Thermometer, Droplets, Wifi, Clock, Signal, Battery } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { WaveformDisplay } from '@/components/WaveformDisplay';
+import { VictoryContainer, VictoryPie } from 'victory-native';
 import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const { isConnected, deviceName, deviceInfo } = useBluetooth();
-  const { isListening, startListening, lastResponse } = useVoice();
+  const { isConnected, deviceName, deviceIp } = useConnection();
   const router = useRouter();
 
-  // Demo sensor data for UI display
-  const sensorData = deviceInfo?.sensors || {
+  // Demo sensor data for UI display (replace with real fetch if needed)
+  const sensorData = {
     temperature: 24.5,
     humidity: 45,
     noise: 38,
     motion: 'None',
   };
 
-  const modelMetrics = deviceInfo?.model || {
+  const modelMetrics = {
     accuracy: 92,
     inferenceTime: 320,
-    lastCommand: lastResponse ? lastResponse.command : 'N/A',
+    lastCommand: 'N/A',
   };
 
+  // Calculate uptime (for demo, using a fixed value)
+  const uptime = {
+    days: 2,
+    hours: 15,
+    minutes: 30
+  };
+
+  // Data for the accuracy pie chart
+  const accuracyData = [
+    { x: "Accuracy", y: modelMetrics.accuracy },
+    { x: "Remaining", y: 100 - modelMetrics.accuracy }
+  ];
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView 
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -42,7 +54,7 @@ export default function HomeScreen() {
             <Text style={styles.subtitle}>Welcome to Sheila assistant</Text>
           </View>
           <View style={[styles.statusIndicator, isConnected ? styles.connected : styles.disconnected]}>
-            <Bluetooth size={12} color={isConnected ? '#10B981' : '#F43F5E'} />
+            <Wifi size={12} color={isConnected ? '#10B981' : '#F43F5E'} />
             <Text style={[styles.statusText, isConnected ? styles.connectedText : styles.disconnectedText]}>
               {isConnected ? 'Connected' : 'Disconnected'}
             </Text>
@@ -51,45 +63,60 @@ export default function HomeScreen() {
 
         {isConnected ? (
           <>
-            <Animated.View entering={FadeInDown.delay(400).duration(800)} style={styles.actionCard}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>Voice Command</Text>
-                <TouchableOpacity 
-                  style={styles.micButton}
-                  onPress={() => router.push('/voice')}
-                >
-                  <Mic size={20} color="#FFFFFF" />
+            <Animated.View entering={FadeInDown.delay(400).duration(800)} style={styles.deviceCard}>
+              <View style={styles.deviceHeader}>
+                <View style={styles.deviceInfo}>
+                  <Wifi size={24} color="#10B981" />
+                  <View style={styles.deviceNameContainer}>
+                    <Text style={styles.deviceName}>{deviceName || deviceIp || 'Sheila Device'}</Text>
+                    <Text style={styles.deviceStatus}>Online</Text>
+                  </View>
+                </View>
+                <TouchableOpacity style={styles.refreshButton}>
+                  <ChevronRight size={20} color="#64748B" />
                 </TouchableOpacity>
               </View>
-              <View style={styles.waveformContainer}>
-                <WaveformDisplay isActive={isListening} />
+
+              <View style={styles.deviceStats}>
+                <View style={styles.statItem}>
+                  <Clock size={16} color="#64748B" />
+                  <Text style={styles.statValue}>{uptime.days}d {uptime.hours}h {uptime.minutes}m</Text>
+                  <Text style={styles.statLabel}>Uptime</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Signal size={16} color="#64748B" />
+                  <Text style={styles.statValue}>-65 dBm</Text>
+                  <Text style={styles.statLabel}>Signal</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Battery size={16} color="#64748B" />
+                  <Text style={styles.statValue}>85%</Text>
+                  <Text style={styles.statLabel}>Battery</Text>
+                </View>
               </View>
-              <View style={styles.responseContainer}>
-                <Text style={styles.responseLabel}>Last Response:</Text>
-                <Text style={styles.responseText}>
-                  {lastResponse ? lastResponse.response : "No recent commands"}
-                </Text>
-              </View>
-              <TouchableOpacity 
-                style={styles.fullButton}
-                onPress={() => startListening()}
-              >
-                <Text style={styles.fullButtonText}>
-                  {isListening ? "Listening..." : "Start New Command"}
-                </Text>
-                <ChevronRight size={20} color="#FFFFFF" />
-              </TouchableOpacity>
             </Animated.View>
 
             <Animated.View entering={FadeInDown.delay(500).duration(800)}>
               <Text style={styles.sectionTitle}>Device Status</Text>
               <View style={styles.gridContainer}>
                 <View style={styles.gridItem}>
-                  <View style={styles.iconWrapper}>
-                    <Activity size={24} color="#2563EB" />
+                  <View style={styles.chartContainer}>
+                    <VictoryContainer>
+                      <VictoryPie
+                        data={accuracyData}
+                        width={120}
+                        height={120}
+                        colorScale={["#2563EB", "#E2E8F0"]}
+                        innerRadius={40}
+                        labelRadius={({ innerRadius }) => (innerRadius as number) + 20}
+                        style={{ labels: { fill: "#1E293B", fontSize: 12, fontFamily: 'Inter-Bold' } }}
+                        labels={({ datum }) => `${datum.y}%`}
+                      />
+                    </VictoryContainer>
                   </View>
                   <Text style={styles.gridLabel}>Model Accuracy</Text>
-                  <Text style={styles.gridValue}>{modelMetrics.accuracy}%</Text>
                 </View>
                 <View style={styles.gridItem}>
                   <View style={styles.iconWrapper}>
@@ -117,12 +144,12 @@ export default function HomeScreen() {
           </>
         ) : (
           <Animated.View entering={FadeInDown.delay(400).duration(800)} style={styles.connectPrompt}>
-            <Bluetooth size={48} color="#64748B" />
+            <Wifi size={48} color="#64748B" />
             <Text style={styles.connectTitle}>No Device Connected</Text>
             <Text style={styles.connectSubtitle}>
               Connect to your Sheila device to start using voice commands and view sensor data
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.connectButton}
               onPress={() => router.push('/connect')}
             >
@@ -146,7 +173,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
@@ -189,7 +216,7 @@ const styles = StyleSheet.create({
   disconnectedText: {
     color: '#F43F5E',
   },
-  actionCard: {
+  deviceCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
@@ -200,57 +227,66 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  cardHeader: {
+  deviceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
   },
-  cardTitle: {
-    fontSize: 18,
+  deviceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deviceNameContainer: {
+    marginLeft: 12,
+  },
+  deviceName: {
+    fontSize: 16,
     fontFamily: 'Inter-Bold',
     color: '#1E293B',
   },
-  micButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#2563EB',
+  deviceStatus: {
+    fontSize: 12,
+    fontFamily: 'Inter-Medium',
+    color: '#10B981',
+    marginTop: 2,
+  },
+  refreshButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  waveformContainer: {
-    height: 60,
-    marginBottom: 16,
-  },
-  responseContainer: {
-    marginBottom: 16,
-  },
-  responseLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter-Medium',
-    color: '#64748B',
-    marginBottom: 4,
-  },
-  responseText: {
-    fontSize: 16,
-    fontFamily: 'Inter-Regular',
-    color: '#1E293B',
-    lineHeight: 24,
-  },
-  fullButton: {
-    height: 48,
-    backgroundColor: '#2563EB',
-    borderRadius: 12,
+  deviceStats: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
   },
-  fullButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: 'Inter-Medium',
-    marginRight: 8,
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 14,
+    fontFamily: 'Inter-Bold',
+    color: '#1E293B',
+    marginTop: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontFamily: 'Inter-Regular',
+    color: '#64748B',
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E2E8F0',
   },
   sectionTitle: {
     fontSize: 18,
@@ -267,6 +303,13 @@ const styles = StyleSheet.create({
     width: '50%',
     paddingHorizontal: 8,
     marginBottom: 16,
+  },
+  chartContainer: {
+    width: 120,
+    height: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   iconWrapper: {
     width: 48,

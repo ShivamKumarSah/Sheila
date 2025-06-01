@@ -33,7 +33,7 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <View style={styles.header}>
         <Text style={styles.title}>Settings</Text>
       </View>
@@ -72,9 +72,9 @@ export default function SettingsScreen() {
                   <ChevronRight size={20} color="#64748B" />
                 </TouchableOpacity>
               </View>
-              
+
               <View style={styles.divider} />
-              
+
               <View style={styles.settingItem}>
                 <View style={styles.settingIconContainer}>
                   <Bell size={20} color="#F97316" />
@@ -90,9 +90,9 @@ export default function SettingsScreen() {
                   thumbColor={notificationsEnabled ? '#2563EB' : '#F1F5F9'}
                 />
               </View>
-              
+
               <View style={styles.divider} />
-              
+
               <View style={styles.settingItem}>
                 <View style={styles.settingIconContainer}>
                   <Settings size={20} color="#8B5CF6" />
@@ -108,9 +108,9 @@ export default function SettingsScreen() {
                   thumbColor={wakeWordEnabled ? '#2563EB' : '#F1F5F9'}
                 />
               </View>
-              
+
               <View style={styles.divider} />
-              
+
               <View style={styles.settingItem}>
                 <View style={styles.settingIconContainer}>
                   <Volume2 size={20} color="#10B981" />
@@ -144,9 +144,9 @@ export default function SettingsScreen() {
                   <ChevronRight size={20} color="#64748B" />
                 </View>
               </TouchableOpacity>
-              
+
               <View style={styles.divider} />
-              
+
               <TouchableOpacity style={styles.settingItem}>
                 <View style={styles.settingIconContainer}>
                   <Info size={20} color="#64748B" />
@@ -191,6 +191,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    paddingBottom: 100,
   },
   section: {
     paddingHorizontal: 20,

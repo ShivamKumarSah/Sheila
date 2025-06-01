@@ -9,6 +9,7 @@ import * as SecureStore from 'expo-secure-store';
 import { AuthProvider } from '@/context/AuthContext';
 import { ConnectionProvider } from '@/context/ConnectionContext';
 import { VoiceProvider } from '@/context/VoiceContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -34,17 +35,19 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <ConnectionProvider>
-        <VoiceProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(app)" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
-          </Stack>
-          <StatusBar style="auto" />
-        </VoiceProvider>
-      </ConnectionProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ConnectionProvider>
+          <VoiceProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(app)" options={{ headerShown: false }} />
+              <Stack.Screen name="+not-found" options={{ title: 'Not Found' }} />
+            </Stack>
+            <StatusBar style="auto" />
+          </VoiceProvider>
+        </ConnectionProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
