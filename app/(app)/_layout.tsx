@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Home, ChartBar as BarChart3, Wifi, Settings } from 'lucide-react-native';
+import { Home, ChartBar as BarChart3, Wifi, Settings, Lightbulb } from 'lucide-react-native';
 import { Platform, StyleSheet } from 'react-native';
 import { BluetoothProvider } from '@/context/BluetoothContext';
 import { VoiceProvider } from '@/context/VoiceContext';
@@ -32,6 +32,13 @@ export default function AppLayout() {
             options={{
               title: 'Home',
               tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+            }}
+          />
+          <Tabs.Screen
+            name="devices"
+            options={{
+              title: 'Devices',
+              tabBarIcon: ({ color, size }) => <Lightbulb size={size} color={color} />,
             }}
           />
           <Tabs.Screen
