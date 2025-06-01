@@ -9,6 +9,18 @@ type AnalyticsType = {
     cmd: string;
     status: string;
     timestamp: string;
+    responseTime?: number;
+    user?: string;
+    response?: string;
+    result?: string;
+  }[];
+  commandFrequency: {
+    command: string;
+    count: number;
+  }[];
+  historicalLatency: {
+    timestamp: string;
+    latency: number;
   }[];
 };
 
@@ -26,15 +38,17 @@ const ConnectionContext = createContext<ConnectionContextType>({
   isConnected: false,
   deviceName: null,
   deviceIp: null,
-  connectViaIP: async () => {},
+  connectViaIP: async () => { },
   sendCommand: async () => ({ status: '', result: '' }),
   fetchAnalytics: async () => ({
     totalCommands: 0,
     successfulCommands: 0,
     averageLatencyMs: 0,
     lastFiveCommands: [],
+    commandFrequency: [],
+    historicalLatency: [],
   }),
-  disconnect: () => {},
+  disconnect: () => { },
 });
 
 export function ConnectionProvider({ children }: { children: React.ReactNode }) {
@@ -93,8 +107,9 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
       }
-
-      return await response.json();
+      const data = await response.json();
+      console.log('Fetched analytics data:', data);
+      return data;
     } catch (error) {
       console.error('Analytics error:', error);
       throw new Error(`Failed to fetch analytics: ${(error as Error).message}`);

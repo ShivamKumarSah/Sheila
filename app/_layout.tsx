@@ -10,6 +10,12 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ConnectionProvider } from '@/context/ConnectionContext';
 import { VoiceProvider } from '@/context/VoiceContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { LogBox } from 'react-native';
+
+// Suppress the specific VictoryNative warning
+LogBox.ignoreLogs([
+  '`renderInPortal` is not supported outside of `VictoryContainer`. Component will be rendered in place',
+]);
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();

@@ -2,13 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '@/context/AuthContext';
-import { useBluetooth } from '@/context/BluetoothContext';
-import { Settings, Bell, Volume2, ChevronRight, LifeBuoy, LogOut, Bluetooth, Info } from 'lucide-react-native';
+import { useConnection } from '@/context/ConnectionContext';
+import { Settings, Bell, Volume2, ChevronRight, LifeBuoy, LogOut, Wifi, Info } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 export default function SettingsScreen() {
   const { user, signOut } = useAuth();
-  const { isConnected, deviceInfo } = useBluetooth();
+  const { isConnected, deviceName, deviceIp } = useConnection();
 
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [wakeWordEnabled, setWakeWordEnabled] = React.useState(true);
@@ -60,12 +60,12 @@ export default function SettingsScreen() {
             <View style={styles.card}>
               <View style={styles.settingItem}>
                 <View style={styles.settingIconContainer}>
-                  <Bluetooth size={20} color="#2563EB" />
+                  <Wifi size={20} color="#2563EB" />
                 </View>
                 <View style={styles.settingContent}>
                   <Text style={styles.settingTitle}>Connected Device</Text>
                   <Text style={styles.settingValue}>
-                    {isConnected ? (deviceInfo?.name || 'Sheila Device') : 'Not connected'}
+                    {isConnected ? (deviceName || deviceIp || 'Sheila Device') : 'Not connected'}
                   </Text>
                 </View>
                 <TouchableOpacity style={styles.settingAction}>

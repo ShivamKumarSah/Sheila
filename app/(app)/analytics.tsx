@@ -2,43 +2,35 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useConnection } from '@/context/ConnectionContext';
-import { VictoryLine, VictoryBar, VictoryChart, VictoryTheme, VictoryAxis, VictoryTooltip, VictoryVoronoiContainer } from 'victory-native';
-import { format, subDays, parseISO } from 'date-fns';
-import { RefreshCw, Calendar, Clock, Users, Zap, ChartBar as BarChart3, TrendingUp } from 'lucide-react-native';
+import { RefreshCw, Clock, Zap } from 'lucide-react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import { VictoryBar, VictoryChart, VictoryTheme, VictoryAxis, VictoryTooltip, VictoryLine, VictoryVoronoiContainer } from 'victory-native';
+import { format, parseISO } from 'date-fns';
 
 const screenWidth = Dimensions.get('window').width;
 
 type TimeRange = '24h' | '7d' | '30d' | 'custom';
 
 type AnalyticsData = {
-  dailyStats: {
-    date: string;
-    commands: number;
-    users: number;
-    successRate: number;
-  }[];
-  topCommands: {
-    command: string;
-    count: number;
-    category: string;
-  }[];
-  hourlyDistribution: {
-    hour: number;
-    count: number;
-  }[];
-  metrics: {
-    totalCommands: number;
-    avgResponseTime: number;
-    userEngagement: number;
-    monthlyGrowth: number;
-  };
-  commandLogs: {
-    timestamp: string;
-    command: string;
+  totalCommands: number;
+  successfulCommands: number;
+  averageLatencyMs: number;
+  lastFiveCommands: {
+    cmd: string;
     status: string;
-    responseTime: number;
-    user: string;
+    timestamp: string;
+    responseTime?: number;
+    user?: string;
+    response?: string;
+    result?: string;
+  }[];
+  commandFrequency: {
+    command: string;
+    count: number;
+  }[];
+  historicalLatency: {
+    timestamp: string;
+    latency: number;
   }[];
 };
 
@@ -53,42 +45,7 @@ export default function AnalyticsScreen() {
     try {
       setIsLoading(true);
       const data = await fetchAnalytics();
-
-      // Transform the data for our visualizations
-      const mockData: AnalyticsData = {
-        dailyStats: Array.from({ length: 30 }, (_, i) => ({
-          date: format(subDays(new Date(), i), 'yyyy-MM-dd'),
-          commands: Math.floor(Math.random() * 100) + 50,
-          users: Math.floor(Math.random() * 20) + 10,
-          successRate: Math.random() * 20 + 80,
-        })).reverse(),
-        topCommands: [
-          { command: "Weather Check", count: 156, category: "Weather" },
-          { command: "Light Control", count: 143, category: "Home" },
-          { command: "Music Play", count: 112, category: "Entertainment" },
-          { command: "Timer Set", count: 98, category: "Utility" },
-          { command: "News Update", count: 87, category: "Information" },
-        ],
-        hourlyDistribution: Array.from({ length: 24 }, (_, i) => ({
-          hour: i,
-          count: Math.floor(Math.random() * 30) + 10,
-        })),
-        metrics: {
-          totalCommands: 2547,
-          avgResponseTime: 320,
-          userEngagement: 78,
-          monthlyGrowth: 23,
-        },
-        commandLogs: Array.from({ length: 20 }, (_, i) => ({
-          timestamp: format(subDays(new Date(), i / 4), 'yyyy-MM-dd HH:mm:ss'),
-          command: ["Check weather", "Turn on lights", "Play music", "Set timer", "News update"][Math.floor(Math.random() * 5)],
-          status: Math.random() > 0.1 ? "Success" : "Failed",
-          responseTime: Math.floor(Math.random() * 200) + 200,
-          user: `User ${Math.floor(Math.random() * 5) + 1}`,
-        })),
-      };
-
-      setAnalyticsData(mockData);
+      setAnalyticsData(data);
     } catch (error) {
       console.error('Failed to load analytics:', error);
     } finally {
@@ -99,11 +56,8 @@ export default function AnalyticsScreen() {
   useEffect(() => {
     if (isConnected) {
       loadAnalytics();
-
-      // Set up auto-refresh every 5 seconds
       const interval = setInterval(loadAnalytics, 5000);
       setRefreshInterval(interval as unknown as NodeJS.Timeout);
-
       return () => {
         if (interval) clearInterval(interval);
       };
@@ -117,7 +71,7 @@ export default function AnalyticsScreen() {
           <Text style={styles.title}>Analytics</Text>
         </View>
         <View style={styles.notConnectedContainer}>
-          <BarChart3 size={48} color="#64748B" />
+          <View style={styles.metricIconContainer}><Text style={{ fontSize: 30 }}>📊</Text></View>
           <Text style={styles.notConnectedTitle}>No Device Connected</Text>
           <Text style={styles.notConnectedSubtitle}>
             Connect to your Sheila device to view analytics data
@@ -177,7 +131,7 @@ export default function AnalyticsScreen() {
                   <Zap size={20} color="#2563EB" />
                 </View>
                 <Text style={styles.metricValue}>
-                  {analyticsData.metrics.totalCommands.toLocaleString()}
+                  {analyticsData.totalCommands.toLocaleString()}
                 </Text>
                 <Text style={styles.metricLabel}>Total Commands</Text>
               </View>
@@ -186,105 +140,89 @@ export default function AnalyticsScreen() {
                   <Clock size={20} color="#7C3AED" />
                 </View>
                 <Text style={styles.metricValue}>
-                  {analyticsData.metrics.avgResponseTime}ms
+                  {analyticsData.averageLatencyMs}ms
                 </Text>
                 <Text style={styles.metricLabel}>Avg Response Time</Text>
               </View>
-              <View style={styles.metricCard}>
-                <View style={styles.metricIconContainer}>
-                  <Users size={20} color="#10B981" />
-                </View>
-                <Text style={styles.metricValue}>
-                  {analyticsData.metrics.userEngagement}%
-                </Text>
-                <Text style={styles.metricLabel}>User Engagement</Text>
-              </View>
-              <View style={styles.metricCard}>
-                <View style={styles.metricIconContainer}>
-                  <TrendingUp size={20} color="#F97316" />
-                </View>
-                <Text style={styles.metricValue}>
-                  +{analyticsData.metrics.monthlyGrowth}%
-                </Text>
-                <Text style={styles.metricLabel}>Monthly Growth</Text>
-              </View>
             </View>
 
-            {/* Command Usage Trend */}
-            <View style={styles.chartCard}>
-              <Text style={styles.chartTitle}>Command Usage Trend</Text>
-              <VictoryChart
-                theme={VictoryTheme.material}
-                width={screenWidth - 40}
-                height={220}
-                padding={{ top: 10, bottom: 40, left: 50, right: 20 }}
-                containerComponent={
-                  <VictoryVoronoiContainer
-                    labels={({ datum }) =>
-                      `${datum.commands} commands\n${format(parseISO(datum.date), 'MMM d')}`
-                    }
+            {/* Command Frequency Bar Chart */}
+            {analyticsData.commandFrequency && analyticsData.commandFrequency.length > 0 && (
+              <View style={styles.chartCard}>
+                <Text style={styles.chartTitle}>Command Frequency</Text>
+                <VictoryChart
+                  theme={VictoryTheme.material}
+                  width={screenWidth - 40}
+                  height={250}
+                  domainPadding={{ x: 20 }}
+                  padding={{ top: 20, bottom: 80, left: 80, right: 20 }}
+                >
+                  <VictoryBar
+                    data={analyticsData.commandFrequency}
+                    x="command"
+                    y="count"
+                    style={{
+                      data: { fill: "#2563EB" },
+                    }}
+                    labels={({ datum }) => datum.count}
                     labelComponent={<VictoryTooltip />}
                   />
-                }
-              >
-                <VictoryLine
-                  data={analyticsData.dailyStats}
-                  x="date"
-                  y="commands"
-                  style={{
-                    data: { stroke: "#2563EB" },
-                  }}
-                />
-                <VictoryAxis
-                  tickFormat={(date) => format(parseISO(date), 'MMM d')}
-                  style={{
-                    tickLabels: { fontSize: 10, padding: 5 },
-                  }}
-                />
-                <VictoryAxis
-                  dependentAxis
-                  tickFormat={(t) => t}
-                  style={{
-                    tickLabels: { fontSize: 10, padding: 5 },
-                  }}
-                />
-              </VictoryChart>
-            </View>
+                  <VictoryAxis
+                    style={{
+                      tickLabels: { fontSize: 10, padding: 5, angle: -45, textAnchor: 'end' },
+                    }}
+                  />
+                  <VictoryAxis
+                    dependentAxis
+                    tickFormat={(t) => t}
+                    style={{
+                      tickLabels: { fontSize: 10, padding: 5 },
+                    }}
+                  />
+                </VictoryChart>
+              </View>
+            )}
 
-            {/* Top Commands */}
-            <View style={styles.chartCard}>
-              <Text style={styles.chartTitle}>Most Used Commands</Text>
-              <VictoryChart
-                theme={VictoryTheme.material}
-                width={screenWidth - 40}
-                height={220}
-                domainPadding={20}
-                padding={{ top: 10, bottom: 40, left: 100, right: 20 }}
-              >
-                <VictoryBar
-                  horizontal
-                  data={analyticsData.topCommands}
-                  x="command"
-                  y="count"
-                  style={{
-                    data: { fill: "#2563EB" },
-                  }}
-                  labels={({ datum }) => datum.count}
-                  labelComponent={<VictoryTooltip />}
-                />
-                <VictoryAxis
-                  style={{
-                    tickLabels: { fontSize: 10, padding: 5 },
-                  }}
-                />
-                <VictoryAxis
-                  dependentAxis
-                  style={{
-                    tickLabels: { fontSize: 10, padding: 5 },
-                  }}
-                />
-              </VictoryChart>
-            </View>
+            {/* Historical Latency Line Graph */}
+            {analyticsData.historicalLatency && analyticsData.historicalLatency.length > 0 && (
+              <View style={styles.chartCard}>
+                <Text style={styles.chartTitle}>Command Latency Over Time</Text>
+                <VictoryChart
+                  theme={VictoryTheme.material}
+                  width={screenWidth - 40}
+                  height={250}
+                  padding={{ top: 20, bottom: 60, left: 60, right: 20 }}
+                  containerComponent={
+                    <VictoryVoronoiContainer
+                      labels={({ datum }) => `Time: ${format(parseISO(datum.timestamp), 'HH:mm:ss')}\nLatency: ${datum.latency}ms`}
+                      labelComponent={<VictoryTooltip />}
+                    />
+                  }
+                >
+                  <VictoryLine
+                    data={analyticsData.historicalLatency}
+                    x="timestamp"
+                    y="latency"
+                    style={{
+                      data: { stroke: "#7C3AED" },
+                    }}
+                  />
+                  <VictoryAxis
+                    tickFormat={(timestamp) => format(parseISO(timestamp), 'HH:mm:ss')}
+                    style={{
+                      tickLabels: { fontSize: 10, padding: 5, angle: -45, textAnchor: 'end' },
+                    }}
+                  />
+                  <VictoryAxis
+                    dependentAxis
+                    tickFormat={(t) => `${t}ms`}
+                    style={{
+                      tickLabels: { fontSize: 10, padding: 5 },
+                    }}
+                  />
+                </VictoryChart>
+              </View>
+            )}
 
             {/* Command Logs */}
             <View style={styles.logsCard}>
@@ -295,26 +233,28 @@ export default function AnalyticsScreen() {
                     <Text style={[styles.logHeaderText, { width: 150 }]}>Timestamp</Text>
                     <Text style={[styles.logHeaderText, { width: 120 }]}>Command</Text>
                     <Text style={[styles.logHeaderText, { width: 80 }]}>Status</Text>
-                    <Text style={[styles.logHeaderText, { width: 100 }]}>Response</Text>
+                    <Text style={[styles.logHeaderText, { width: 150 }]}>Response</Text>
+                    <Text style={[styles.logHeaderText, { width: 100 }]}>Resp Time</Text>
                     <Text style={[styles.logHeaderText, { width: 80 }]}>User</Text>
                   </View>
-                  {analyticsData.commandLogs.map((log, index) => (
+                  {analyticsData.lastFiveCommands.map((log, index) => (
                     <View key={index} style={styles.logRow}>
                       <Text style={[styles.logText, { width: 150 }]}>{log.timestamp}</Text>
-                      <Text style={[styles.logText, { width: 120 }]}>{log.command}</Text>
+                      <Text style={[styles.logText, { width: 120 }]}>{log.cmd}</Text>
                       <View style={[
                         styles.statusBadge,
-                        log.status === 'Success' ? styles.successBadge : styles.errorBadge
+                        log.status === 'success' ? styles.successBadge : styles.errorBadge
                       ]}>
                         <Text style={[
                           styles.statusText,
-                          log.status === 'Success' ? styles.successText : styles.errorText
+                          log.status === 'success' ? styles.successText : styles.errorText
                         ]}>
                           {log.status}
                         </Text>
                       </View>
+                      <Text style={[styles.logText, { width: 150 }]}>{log.response || log.result || 'N/A'}</Text>
                       <Text style={[styles.logText, { width: 100 }]}>{log.responseTime}ms</Text>
-                      <Text style={[styles.logText, { width: 80 }]}>{log.user}</Text>
+                      <Text style={[styles.logText, { width: 80 }]}>{log.user || 'N/A'}</Text>
                     </View>
                   ))}
                 </View>
