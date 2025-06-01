@@ -21,14 +21,14 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: false,
-  signIn: async () => {},
-  signOut: async () => {},
+  signIn: async () => { },
+  signOut: async () => { },
   isAuthenticated: false,
 });
 
 // Demo users for testing
 const DEMO_USERS = [
-  { id: '1', email: 'demo@example.com', password: 'password', name: 'Demo User' },
+  { id: '1', email: 'shivam@gmail.com', password: '123456', name: 'Shivam' },
   { id: '2', kitNumber: 'SHEILA001', name: 'Kit User' },
 ];
 
@@ -87,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Mock authentication
       let foundUser = null;
-      
+
       if (data.email && data.password) {
         foundUser = DEMO_USERS.find(
           u => u.email === data.email && u.password === data.password
@@ -124,13 +124,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        user, 
-        isLoading, 
-        signIn, 
-        signOut, 
-        isAuthenticated: !!user 
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        signIn,
+        signOut,
+        isAuthenticated: !!user
       }}
     >
       {children}

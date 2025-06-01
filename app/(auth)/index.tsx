@@ -7,8 +7,8 @@ import { Mail, Lock, ArrowRight, KeyRound } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('demo@example.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('shivam@gmail.com');
+  const [password, setPassword] = useState('123456');
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
 
@@ -37,9 +37,9 @@ export default function LoginScreen() {
     >
       <View style={styles.contentContainer}>
         <Animated.View entering={FadeIn.delay(300).duration(800)} style={styles.logoContainer}>
-          <Image 
-            source={{ uri: 'https://images.pexels.com/photos/4439901/pexels-photo-4439901.jpeg' }} 
-            style={styles.logoBackground} 
+          <Image
+            source={{ uri: 'https://images.pexels.com/photos/4439901/pexels-photo-4439901.jpeg' }}
+            style={styles.logoBackground}
           />
           <View style={styles.logoOverlay}>
             <Text style={styles.logoText}>SHEILA</Text>
@@ -50,7 +50,7 @@ export default function LoginScreen() {
         <Animated.View entering={FadeInDown.delay(600).duration(800)} style={styles.formContainer}>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
-          
+
           <View style={styles.inputContainer}>
             <Mail size={20} color="#64748B" style={styles.inputIcon} />
             <TextInput
@@ -63,7 +63,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
             />
           </View>
-          
+
           <View style={styles.inputContainer}>
             <Lock size={20} color="#64748B" style={styles.inputIcon} />
             <TextInput
@@ -75,7 +75,7 @@ export default function LoginScreen() {
               secureTextEntry
             />
           </View>
-          
+
           <TouchableOpacity
             style={styles.loginButton}
             onPress={handleLogin}
@@ -86,13 +86,13 @@ export default function LoginScreen() {
             </Text>
             {!isLoading && <ArrowRight size={20} color="#FFF" />}
           </TouchableOpacity>
-          
+
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>OR</Text>
             <View style={styles.dividerLine} />
           </View>
-          
+
           <Link href="/(auth)/kit-login" asChild>
             <TouchableOpacity style={styles.kitButton}>
               <KeyRound size={20} color="#2563EB" />
