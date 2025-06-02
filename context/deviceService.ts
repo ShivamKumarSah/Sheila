@@ -1,4 +1,4 @@
-import { API_URL } from '../config';
+import { getApiUrl } from '../app/config';
 
 export interface Device {
     id: string;
@@ -17,6 +17,8 @@ class DeviceService {
     private listeners: ((devices: Device[]) => void)[] = [];
     private retryCount = 0;
     private maxRetries = 3;
+    private deviceIp: string | null = null;
+    private pollingInterval: NodeJS.Timeout | null = null;
 
     private constructor() { }
 
@@ -25,6 +27,20 @@ class DeviceService {
             DeviceService.instance = new DeviceService();
         }
         return DeviceService.instance;
+    }
+
+    // Set the current device IP
+    setDeviceIp(ip: string | null) {
+        this.deviceIp = ip;
+        // Clear devices when IP changes
+        this.devices = [];
+        this.notifyListeners();
+
+        // Stop existing polling if any
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
     }
 
     // Subscribe to device updates
@@ -41,6 +57,10 @@ class DeviceService {
     }
 
     private async fetchWithRetry(url: string, options?: RequestInit): Promise<Response> {
+        if (!this.deviceIp) {
+            throw new Error('No device IP address set');
+        }
+
         try {
             console.log(`Fetching from: ${url}`);
             const response = await fetch(url, options);
@@ -66,9 +86,14 @@ class DeviceService {
 
     // Fetch all devices
     async fetchDevices(): Promise<Device[]> {
+        if (!this.deviceIp) {
+            console.log('No device IP set, skipping device fetch');
+            return [];
+        }
+
         try {
             console.log('Fetching devices...');
-            const response = await this.fetchWithRetry(`${API_URL}/devices`);
+            const response = await this.fetchWithRetry(getApiUrl(this.deviceIp) + '/devices');
             const devices = await response.json();
             console.log('Fetched devices:', devices);
 
@@ -83,8 +108,12 @@ class DeviceService {
 
     // Add a new device
     async addDevice(device: Omit<Device, 'id' | 'lastUpdated'>): Promise<Device> {
+        if (!this.deviceIp) {
+            throw new Error('No device IP address set');
+        }
+
         try {
-            const response = await this.fetchWithRetry(`${API_URL}/devices`, {
+            const response = await this.fetchWithRetry(getApiUrl(this.deviceIp) + '/devices', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -104,8 +133,12 @@ class DeviceService {
 
     // Remove a device
     async removeDevice(deviceId: string): Promise<void> {
+        if (!this.deviceIp) {
+            throw new Error('No device IP address set');
+        }
+
         try {
-            await this.fetchWithRetry(`${API_URL}/devices/${deviceId}`, {
+            await this.fetchWithRetry(getApiUrl(this.deviceIp) + `/devices/${deviceId}`, {
                 method: 'DELETE',
             });
 
@@ -119,8 +152,12 @@ class DeviceService {
 
     // Update device state
     async updateDeviceState(deviceId: string, updates: Partial<Device>): Promise<Device> {
+        if (!this.deviceIp) {
+            throw new Error('No device IP address set');
+        }
+
         try {
-            const response = await this.fetchWithRetry(`${API_URL}/devices/${deviceId}/state`, {
+            const response = await this.fetchWithRetry(getApiUrl(this.deviceIp) + `/devices/${deviceId}/state`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -142,9 +179,23 @@ class DeviceService {
 
     // Start polling for device updates
     startPolling(interval: number = 5000) {
+        if (!this.deviceIp) {
+            console.log('No device IP set, skipping polling start');
+            return null;
+        }
+
         console.log('Starting device polling...');
         this.fetchDevices();
-        return setInterval(() => this.fetchDevices(), interval);
+        this.pollingInterval = setInterval(() => this.fetchDevices(), interval);
+        return this.pollingInterval;
+    }
+
+    // Stop polling
+    stopPolling() {
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
     }
 }
 

@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Lightbulb, Fan, Power, ChevronUp, ChevronDown, Plus, Sun, Moon, Trash2 } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import deviceService, { Device } from '../services/deviceService';
+import deviceService, { Device } from '../../context/deviceService';
 
 const { width } = Dimensions.get('window');
 

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Alert } from 'react-native';
+import DeviceService from './deviceService';
 
 type AnalyticsType = {
   totalCommands: number;
@@ -56,6 +57,10 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   const [deviceName, setDeviceName] = useState<string | null>(null);
   const [deviceIp, setDeviceIp] = useState<string | null>(null);
 
+  useEffect(() => {
+    DeviceService.setDeviceIp(deviceIp);
+  }, [deviceIp]);
+
   const connectViaIP = async (ipAddress: string) => {
     try {
       const response = await fetch(`http://${ipAddress}:5000/api/ping`);
@@ -63,6 +68,7 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
         setIsConnected(true);
         setDeviceName(`Pi (${ipAddress})`);
         setDeviceIp(ipAddress);
+        DeviceService.startPolling();
       } else {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -117,6 +123,8 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   };
 
   const disconnect = () => {
+    DeviceService.stopPolling();
+    DeviceService.setDeviceIp(null);
     setIsConnected(false);
     setDeviceName(null);
     setDeviceIp(null);
