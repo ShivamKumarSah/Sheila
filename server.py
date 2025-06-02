@@ -2,12 +2,133 @@ from flask import Flask, request, jsonify
 from datetime import datetime
 import random
 import time
-from collections import Counter # Import Counter
+from collections import Counter
+from flask_cors import CORS
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for all API routes
 
-# In-memory list to record command history
+# In-memory storage for devices and command history
+DEVICES = {}
 COMMAND_HISTORY = []
+
+def generate_device_id():
+    return f"DEV_{int(time.time())}_{random.randint(1000, 9999)}"
+
+def create_sample_devices():
+    """Create and return sample devices"""
+    logger.debug("Creating sample devices")
+    sample_devices = [
+        {
+            "id": generate_device_id(),
+            "name": "Living Room Light",
+            "type": "bulb",
+            "room": "Living Room",
+            "isOn": False,
+            "color": "#FFB800",
+            "lastUpdated": datetime.utcnow().isoformat()
+        },
+        {
+            "id": generate_device_id(),
+            "name": "Bedroom Fan",
+            "type": "fan",
+            "room": "Bedroom",
+            "isOn": False,
+            "speed": 1,
+            "color": "#4ECDC4",
+            "lastUpdated": datetime.utcnow().isoformat()
+        }
+    ]
+    return sample_devices
+
+@app.route('/api/devices', methods=['GET'])
+def get_devices():
+    """Get all registered devices"""
+    try:
+        logger.debug("GET /api/devices called")
+        global DEVICES
+        
+        # If no devices exist, add sample devices
+        if not DEVICES:
+            logger.debug("No devices found, adding sample devices")
+            sample_devices = create_sample_devices()
+            for device in sample_devices:
+                DEVICES[device["id"]] = device
+            logger.debug(f"Added {len(sample_devices)} sample devices")
+            logger.debug(f"Current devices: {DEVICES}")
+
+        devices_list = list(DEVICES.values())
+        logger.debug(f"Returning {len(devices_list)} devices: {devices_list}")
+        return jsonify(devices_list), 200
+    except Exception as e:
+        logger.error(f"Error in get_devices: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/devices', methods=['POST'])
+def add_device():
+    """Add a new device"""
+    try:
+        data = request.get_json()
+        logger.debug(f"POST /api/devices called with data: {data}")
+        
+        if not data or 'name' not in data or 'type' not in data:
+            return jsonify({"error": "Missing required fields"}), 400
+
+        device_id = generate_device_id()
+        device = {
+            "id": device_id,
+            "name": data['name'],
+            "type": data['type'],
+            "room": data.get('room', 'Unknown'),
+            "isOn": False,
+            "speed": 1 if data['type'] == 'fan' else None,
+            "color": data.get('color', '#FFB800'),
+            "lastUpdated": datetime.utcnow().isoformat()
+        }
+        
+        DEVICES[device_id] = device
+        logger.debug(f"Added new device: {device}")
+        return jsonify(device), 201
+    except Exception as e:
+        logger.error(f"Error in add_device: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/devices/<device_id>', methods=['DELETE'])
+def remove_device(device_id):
+    """Remove a device"""
+    if device_id not in DEVICES:
+        return jsonify({"error": "Device not found"}), 404
+    
+    del DEVICES[device_id]
+    return jsonify({"message": "Device removed successfully"}), 200
+
+@app.route('/api/devices/<device_id>/state', methods=['PUT'])
+def update_device_state(device_id):
+    """Update device state (on/off, speed)"""
+    if device_id not in DEVICES:
+        return jsonify({"error": "Device not found"}), 404
+
+    data = request.get_json()
+    device = DEVICES[device_id]
+    
+    if 'isOn' in data:
+        device['isOn'] = data['isOn']
+    
+    if device['type'] == 'fan' and 'speed' in data:
+        device['speed'] = max(1, min(3, data['speed']))
+    
+    if 'color' in data:
+        device['color'] = data['color']
+    
+    device['lastUpdated'] = datetime.utcnow().isoformat()
+    DEVICES[device_id] = device
+    
+    return jsonify(device), 200
 
 @app.route('/api/ping', methods=['GET'])
 def ping():
@@ -120,5 +241,10 @@ def analytics():
     }), 200
 
 if __name__ == '__main__':
-    # Listen on all interfaces, port 5000
-    app.run(host='0.0.0.0', port=5000, debug=True) # Added debug=True for easier development 
+    logger.info("Starting server...")
+    # Create initial sample devices
+    sample_devices = create_sample_devices()
+    for device in sample_devices:
+        DEVICES[device["id"]] = device
+    logger.info(f"Created {len(sample_devices)} initial sample devices")
+    app.run(host='0.0.0.0', port=5000, debug=True) 

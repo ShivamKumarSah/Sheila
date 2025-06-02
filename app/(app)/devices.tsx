@@ -1,79 +1,97 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Lightbulb, Fan, Power, ChevronUp, ChevronDown, Plus, Sun, Moon } from 'lucide-react-native';
+import { Lightbulb, Fan, Power, ChevronUp, ChevronDown, Plus, Sun, Moon, Trash2 } from 'lucide-react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import deviceService, { Device } from '../services/deviceService';
 
 const { width } = Dimensions.get('window');
 
-interface Device {
-    id: string;
-    name: string;
-    type: 'bulb' | 'fan';
-    isOn: boolean;
-    speed?: number;
-    color?: string;
-    room: string;
-}
-
 export default function DevicesScreen() {
-    const [devices, setDevices] = useState<Device[]>([
-        {
-            id: '1',
-            name: 'Main Light',
-            type: 'bulb',
-            isOn: false,
-            color: '#FFB800',
-            room: 'Living Room'
-        },
-        {
-            id: '2',
-            name: 'Bedside Lamp',
-            type: 'bulb',
-            isOn: false,
-            color: '#FF6B6B',
-            room: 'Bedroom'
-        },
-        {
-            id: '3',
-            name: 'Ceiling Fan',
-            type: 'fan',
-            isOn: false,
-            speed: 1,
-            color: '#4ECDC4',
-            room: 'Living Room'
-        },
-        {
-            id: '4',
-            name: 'Table Fan',
-            type: 'fan',
-            isOn: false,
-            speed: 1,
-            color: '#45B7D1',
-            room: 'Bedroom'
-        },
-    ]);
+    const [devices, setDevices] = useState<Device[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const toggleDevice = (id: string) => {
-        setDevices(devices.map(device =>
-            device.id === id ? { ...device, isOn: !device.isOn } : device
-        ));
+    useEffect(() => {
+        // Initial fetch
+        loadDevices();
+
+        // Subscribe to device updates
+        const unsubscribe = deviceService.subscribe(setDevices);
+
+        // Start polling for updates
+        const pollInterval = deviceService.startPolling();
+
+        return () => {
+            unsubscribe();
+            clearInterval(pollInterval);
+        };
+    }, []);
+
+    const loadDevices = async () => {
+        try {
+            setLoading(true);
+            await deviceService.fetchDevices();
+        } catch (error) {
+            Alert.alert('Error', 'Failed to load devices');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const adjustFanSpeed = (id: string, increment: boolean) => {
-        setDevices(devices.map(device => {
-            if (device.id === id && device.type === 'fan') {
-                const newSpeed = increment
-                    ? Math.min((device.speed || 1) + 1, 3)
-                    : Math.max((device.speed || 1) - 1, 1);
-                return { ...device, speed: newSpeed };
-            }
-            return device;
-        }));
+    const toggleDevice = async (device: Device) => {
+        try {
+            await deviceService.updateDeviceState(device.id, {
+                isOn: !device.isOn
+            });
+        } catch (error) {
+            Alert.alert('Error', 'Failed to toggle device');
+        }
     };
 
-    const getDeviceGradient = (device: Device) => {
+    const adjustFanSpeed = async (device: Device, increment: boolean) => {
+        if (!device.speed) return;
+
+        try {
+            const newSpeed = increment
+                ? Math.min(device.speed + 1, 3)
+                : Math.max(device.speed - 1, 1);
+
+            await deviceService.updateDeviceState(device.id, {
+                speed: newSpeed
+            });
+        } catch (error) {
+            Alert.alert('Error', 'Failed to adjust fan speed');
+        }
+    };
+
+    const removeDevice = async (device: Device) => {
+        Alert.alert(
+            'Remove Device',
+            `Are you sure you want to remove ${device.name}?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Remove',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            await deviceService.removeDevice(device.id);
+                        } catch (error) {
+                            Alert.alert('Error', 'Failed to remove device');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const addNewDevice = () => {
+        // TODO: Implement add device modal/form
+        Alert.alert('Coming Soon', 'Device addition will be implemented soon!');
+    };
+
+    const getDeviceGradient = (device: Device): [string, string] => {
         if (!device.isOn) return ['#F8FAFC', '#F1F5F9'];
 
         switch (device.type) {
@@ -95,7 +113,10 @@ export default function DevicesScreen() {
                     <Text style={styles.title}>Devices</Text>
                     <Text style={styles.subtitle}>Control your smart home</Text>
                 </View>
-                <TouchableOpacity style={styles.addButton}>
+                <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={addNewDevice}
+                >
                     <Plus size={20} color="#FFFFFF" />
                 </TouchableOpacity>
             </View>
@@ -156,6 +177,12 @@ export default function DevicesScreen() {
                                                             {device.type === 'bulb' ? 'Smart Bulb' : 'Smart Fan'}
                                                         </Text>
                                                     </View>
+                                                    <TouchableOpacity
+                                                        style={styles.removeButton}
+                                                        onPress={() => removeDevice(device)}
+                                                    >
+                                                        <Trash2 size={18} color={device.isOn ? '#FFFFFF' : '#64748B'} />
+                                                    </TouchableOpacity>
                                                 </View>
 
                                                 <View style={styles.controlsContainer}>
@@ -166,7 +193,7 @@ export default function DevicesScreen() {
                                                                     styles.speedButton,
                                                                     device.speed === 1 && styles.speedButtonDisabled
                                                                 ]}
-                                                                onPress={() => adjustFanSpeed(device.id, false)}
+                                                                onPress={() => adjustFanSpeed(device, false)}
                                                                 disabled={device.speed === 1}
                                                             >
                                                                 <ChevronDown
@@ -185,7 +212,7 @@ export default function DevicesScreen() {
                                                                     styles.speedButton,
                                                                     device.speed === 3 && styles.speedButtonDisabled
                                                                 ]}
-                                                                onPress={() => adjustFanSpeed(device.id, true)}
+                                                                onPress={() => adjustFanSpeed(device, true)}
                                                                 disabled={device.speed === 3}
                                                             >
                                                                 <ChevronUp
@@ -200,7 +227,7 @@ export default function DevicesScreen() {
                                                             styles.powerButton,
                                                             device.isOn && styles.powerButtonActive
                                                         ]}
-                                                        onPress={() => toggleDevice(device.id)}
+                                                        onPress={() => toggleDevice(device)}
                                                     >
                                                         <Power
                                                             size={20}
@@ -366,5 +393,10 @@ const styles = StyleSheet.create({
     },
     powerButtonActive: {
         backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    },
+    removeButton: {
+        padding: 8,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
     },
 }); 
