@@ -18,7 +18,6 @@ class DeviceService {
     private retryCount = 0;
     private maxRetries = 3;
     private deviceIp: string | null = null;
-    private pollingInterval: NodeJS.Timeout | null = null;
 
     private constructor() { }
 
@@ -32,15 +31,6 @@ class DeviceService {
     // Set the current device IP
     setDeviceIp(ip: string | null) {
         this.deviceIp = ip;
-        // Clear devices when IP changes
-        this.devices = [];
-        this.notifyListeners();
-
-        // Stop existing polling if any
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
-        }
     }
 
     // Subscribe to device updates
@@ -86,11 +76,6 @@ class DeviceService {
 
     // Fetch all devices
     async fetchDevices(): Promise<Device[]> {
-        if (!this.deviceIp) {
-            console.log('No device IP set, skipping device fetch');
-            return [];
-        }
-
         try {
             console.log('Fetching devices...');
             const response = await this.fetchWithRetry(getApiUrl(this.deviceIp) + '/devices');
@@ -108,10 +93,6 @@ class DeviceService {
 
     // Add a new device
     async addDevice(device: Omit<Device, 'id' | 'lastUpdated'>): Promise<Device> {
-        if (!this.deviceIp) {
-            throw new Error('No device IP address set');
-        }
-
         try {
             const response = await this.fetchWithRetry(getApiUrl(this.deviceIp) + '/devices', {
                 method: 'POST',
@@ -133,10 +114,6 @@ class DeviceService {
 
     // Remove a device
     async removeDevice(deviceId: string): Promise<void> {
-        if (!this.deviceIp) {
-            throw new Error('No device IP address set');
-        }
-
         try {
             await this.fetchWithRetry(getApiUrl(this.deviceIp) + `/devices/${deviceId}`, {
                 method: 'DELETE',
@@ -152,10 +129,6 @@ class DeviceService {
 
     // Update device state
     async updateDeviceState(deviceId: string, updates: Partial<Device>): Promise<Device> {
-        if (!this.deviceIp) {
-            throw new Error('No device IP address set');
-        }
-
         try {
             const response = await this.fetchWithRetry(getApiUrl(this.deviceIp) + `/devices/${deviceId}/state`, {
                 method: 'PUT',
@@ -179,23 +152,9 @@ class DeviceService {
 
     // Start polling for device updates
     startPolling(interval: number = 5000) {
-        if (!this.deviceIp) {
-            console.log('No device IP set, skipping polling start');
-            return null;
-        }
-
         console.log('Starting device polling...');
         this.fetchDevices();
-        this.pollingInterval = setInterval(() => this.fetchDevices(), interval);
-        return this.pollingInterval;
-    }
-
-    // Stop polling
-    stopPolling() {
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
-        }
+        return setInterval(() => this.fetchDevices(), interval);
     }
 }
 

@@ -68,7 +68,6 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
         setIsConnected(true);
         setDeviceName(`Pi (${ipAddress})`);
         setDeviceIp(ipAddress);
-        DeviceService.startPolling();
       } else {
         throw new Error(`HTTP ${response.status}`);
       }
@@ -123,8 +122,6 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   };
 
   const disconnect = () => {
-    DeviceService.stopPolling();
-    DeviceService.setDeviceIp(null);
     setIsConnected(false);
     setDeviceName(null);
     setDeviceIp(null);
